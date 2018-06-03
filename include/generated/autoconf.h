@@ -1,7 +1,7 @@
 /*
  *
  * Automatically generated file; DO NOT EDIT.
- * Linux/arm64 3.10.106 Kernel Configuration
+ * Linux/arm64 3.10.107 Kernel Configuration
  *
  */
 #define CONFIG_RING_BUFFER 1
@@ -66,7 +66,6 @@
 #define CONFIG_OF_IOMMU 1
 #define CONFIG_MTK_COMBO_PLAT_PATH ""
 #define CONFIG_USB_STORAGE_USBAT 1
-#define CONFIG_CPU_FREQ_GOV_ALUCARD 1
 #define CONFIG_MTK_SERIAL 1
 #define CONFIG_NF_NAT_PROTO_GRE 1
 #define CONFIG_ANDROID_BINDER_IPC 1
@@ -817,7 +816,6 @@
 #define CONFIG_IPV6_MIP6 1
 #define CONFIG_NLATTR 1
 #define CONFIG_TCP_CONG_CUBIC 1
-#define CONFIG_CPU_FREQ_GOV_RENICE 1
 #define CONFIG_NR_CPUS 8
 #define CONFIG_SUSPEND_FREEZER 1
 #define CONFIG_SND_SUPPORT_OLD_API 1
