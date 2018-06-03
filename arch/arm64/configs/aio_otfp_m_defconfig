@@ -5,6 +5,11 @@ CONFIG_LOCALVERSION="-VENOM"
 #Venom additions
 
 #
+# Kernel samepage merging
+#
+CONFIG_KSM=y
+
+#
 # Config.gz
 #
 CONFIG_IKCONFIG=y
