@@ -1,1 +1,0 @@
-#define UTS_RELEASE "3.10.107-RENICE-g686e589-dirty"
