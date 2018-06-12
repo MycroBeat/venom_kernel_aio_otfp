@@ -481,8 +481,31 @@ static ssize_t store_##file_name					\
 	return ret ? ret : count;					\
 }
 
+extern void set_limit_max_freq_by_user(unsigned int limited_max_freq);
+
+static ssize_t store_scaling_max_freq					
+(struct cpufreq_policy *policy, const char *buf, size_t count)		
+{									
+	unsigned int ret;						
+	struct cpufreq_policy new_policy;				
+									
+	ret = cpufreq_get_policy(&new_policy, policy->cpu);		
+	if (ret)							
+		return -EINVAL;						
+									
+	ret = sscanf(buf, "%u", &new_policy.max);			
+	if (ret != 1)							
+		return -EINVAL;						
+																		
+	ret = __cpufreq_set_policy(policy, &new_policy);		
+	policy->user_policy.max = policy->max;	
+    set_limit_max_freq_by_user(policy->max);
+			
+									
+	return ret ? ret : count;					
+}
+
 store_one(scaling_min_freq, min);
-store_one(scaling_max_freq, max);
 
 /**
  * show_cpuinfo_cur_freq - current CPU frequency as detected by hardware
