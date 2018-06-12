@@ -132,7 +132,11 @@ extern unsigned int mt_get_cpu_freq(void);
 #define DEFAULT_VOLT_VLTE       (100000)
 
 /* for DVFS OPP table */
+#ifdef CONFIG_MTK_CPU_OC
+#define CPU_DVFS_FREQ0   (2002000) /* KHz */
+#else
 #define CPU_DVFS_FREQ0   (1994000) /* KHz */
+#endif
 #define CPU_DVFS_FREQ1   (1794000) /* KHz */
 #define CPU_DVFS_FREQ2   (1690000) /* KHz */
 #define CPU_DVFS_FREQ3   (1612000) /* KHz */
@@ -269,6 +273,11 @@ bool is_in_cpufreq = 0;
 unsigned int AllowTurboMode = 0;
 
 #ifdef __KERNEL__
+
+#ifdef CONFIG_MTK_CPU_OC
+#define CONFIG_MORE_FREQ
+#endif
+
 static unsigned int _mt_cpufreq_get_cpu_level(void)
 {
     unsigned int lv = 0;
@@ -279,9 +288,6 @@ static unsigned int _mt_cpufreq_get_cpu_level(void)
 
     /* get CPU clock-frequency from DT */
 #ifdef CONFIG_OF
-#ifdef CONFIG_MTK_CPU_OC
-    return CPU_LEVEL_1;	// force LEVEL_1
-#else
     {
         struct device_node *node = of_find_node_by_type(NULL, "cpu");
         unsigned int cpu_speed = 0;
@@ -304,23 +310,38 @@ static unsigned int _mt_cpufreq_get_cpu_level(void)
             cpu_speed = cpu_speed / 1000 / 1000;    // MHz
         else {
             cpufreq_err("@%s: missing clock-frequency property, use default CPU level\n", __func__);
+    #ifdef CONFIG_MTK_CPU_OC
+            return CPU_LEVEL_0;
+    #else    /* CONFIG_MTK_CPU_OC */
             return CPU_LEVEL_1;
+    #endif   /* CONFIG_MTK_CPU_OC */
         }
 
         cpufreq_info("CPU clock-frequency from DT = %d MHz\n", cpu_speed);
 
         if (cpu_speed >= 1700)
+    #ifdef CONFIG_MTK_CPU_OC
+            lv = CPU_LEVEL_0;   // 2.0G
+    #else    /* CONFIG_MTK_CPU_OC */
             lv = CPU_LEVEL_1;   // 1.7G
+    #endif   /* CONFIG_MTK_CPU_OC */
         else if (cpu_speed >= 1500)
+    #ifdef CONFIG_MTK_CPU_OC
+            lv = CPU_LEVEL_0;   // 2.0G
+    #else    /* CONFIG_MTK_CPU_OC */
             lv = CPU_LEVEL_2;   // 1.5G
+    #endif   /* CONFIG_MTK_CPU_OC */ 
         else if (cpu_speed >= 1300)
             lv = CPU_LEVEL_3;   // 1.3G
         else {
             cpufreq_err("No suitable DVFS table, set to default CPU level! clock-frequency=%d\n", cpu_speed);
-            lv = CPU_LEVEL_1;
+    #ifdef CONFIG_MTK_CPU_OC
+            return CPU_LEVEL_0;
+    #else    /* CONFIG_MTK_CPU_OC */
+            return CPU_LEVEL_1;
+    #endif   /* CONFIG_MTK_CPU_OC */
         }
     }
-#endif
 #else   /* CONFIG_OF */
     /* no DT, we should check efuse for CPU speed HW bounding */
     {
@@ -333,13 +354,25 @@ static unsigned int _mt_cpufreq_get_cpu_level(void)
             case 1:
             case 2:
 				AllowTurboMode = 0; /* 1.69 * 1.1 = 1.859G */
+            #ifdef CONFIG_MTK_CPU_OC
+                lv = CPU_LEVEL_0;   // 2.0G
+                break;
+            #endif
             case 3:
             case 4:
+    #ifdef CONFIG_MTK_CPU_OC
+                lv = CPU_LEVEL_0;   // 2.0G
+    #else    /* CONFIG_MTK_CPU_OC */
                 lv = CPU_LEVEL_1;   // 1.7G
+    #endif
                 break;
             case 5:
             case 6:
+    #ifdef CONFIG_MTK_CPU_OC
+                lv = CPU_LEVEL_0;   // 2.0G
+    #else    /* CONFIG_MTK_CPU_OC */
                 lv = CPU_LEVEL_2;   // 1.5G
+    #endif
                 break;
             case 7:
             case 8:
@@ -347,7 +380,11 @@ static unsigned int _mt_cpufreq_get_cpu_level(void)
                 break;
             default:
                 cpufreq_err("No suitable DVFS table, set to default CPU level! efuse=0x%x\n", cpu_speed_bounding);
+    #ifdef CONFIG_MTK_CPU_OC
+                lv = CPU_LEVEL_0;   // 2.0G
+    #else    /* CONFIG_MTK_CPU_OC */
                 lv = CPU_LEVEL_1;
+    #endif         
                 break;
         }
 		cpufreq_info("current CPU efuse is %d, AllowTurboMode=%d\n", cpu_speed_bounding, AllowTurboMode);
@@ -359,7 +396,11 @@ static unsigned int _mt_cpufreq_get_cpu_level(void)
 #else
 static unsigned int _mt_cpufreq_get_cpu_level(void)
 {
-    return CPU_LEVEL_1;
+    #ifdef CONFIG_MTK_CPU_OC
+        return CPU_LEVEL_0; // 2.0G
+    #else /* CONFIG_MTK_CPU_OC */
+        return CPU_LEVEL_1;
+    #endif
 }
 #endif
 
@@ -1017,9 +1058,15 @@ static struct mt_cpu_dvfs *id_to_cpu_dvfs(enum mt_cpu_dvfs_id id)
 /* DVFS OPP table */
 /* Notice: Each table MUST has 8 element to avoid ptpod error */
 
-#define NR_MAX_OPP_TBL  8
 #define NR_MAX_CPU      8
+#ifdef CONFIG_MORE_FREQ
+#define NR_MAX_OPP_TBL  12
+#else
+#define NR_MAX_OPP_TBL  8
+#endif
 
+
+#ifndef CONFIG_MTK_CPU_OC
 /* CPU LEVEL 0, 2GHz segment (useless) */
 static struct mt_cpu_freq_info opp_tbl_e1_0[] = {
     OP(CPU_DVFS_FREQ0,  110000),
@@ -1031,7 +1078,23 @@ static struct mt_cpu_freq_info opp_tbl_e1_0[] = {
     OP(CPU_DVFS_FREQ9,  87500),
     OP(CPU_DVFS_FREQ10, 83125),
 };
-
+#else
+/* CPU LEVEL 0, 2GHz segment (useless) */
+static struct mt_cpu_freq_info opp_tbl_e1_0[] = {
+    OP(CPU_DVFS_FREQ0,  110000),
+    OP(CPU_DVFS_FREQ1,  106875),
+    OP(CPU_DVFS_FREQ2,  104375),
+    OP(CPU_DVFS_FREQ3,  103750),
+    OP(CPU_DVFS_FREQ4,  102750),
+    OP(CPU_DVFS_FREQ4_2,  101875),
+    OP(CPU_DVFS_FREQ5,  100000),
+    OP(CPU_DVFS_FREQ6,  99375),
+    OP(CPU_DVFS_FREQ7,  95625),
+    OP(CPU_DVFS_FREQ8,  91875),
+    OP(CPU_DVFS_FREQ9, 87500),
+    OP(CPU_DVFS_FREQ10, 83125),
+};
+#endif
 #ifdef CONFIG_MTK_CPU_OC
 /* CPU LEVEL 1, 2.0GHz segment */
 static struct mt_cpu_freq_info opp_tbl_e1_1[] = {
@@ -4299,9 +4362,15 @@ ssize_t show_UV_mV_table(struct cpufreq_policy *policy, char *buf)
 /* find how many actual entries there are */
 
     for(i=0; i < NR_MAX_OPP_TBL; i++) {
+    #ifdef CONFIG_MTK_CPU_OC
 	out += sprintf(out, "%umhz: %d mV\n",
-			opp_tbl_e1_1[i].cpufreq_khz/1000,	// in MHz
-			opp_tbl_e1_1[i].cpufreq_volt/100);	// in mV
+			opp_tbl_e1_0[i].cpufreq_khz/1000,	// in MHz
+			opp_tbl_e1_0[i].cpufreq_volt/100);	// in mV
+    #else
+    out += sprintf(out, "%umhz: %d mV\n",
+		opp_tbl_e1_1[i].cpufreq_khz/1000,	// in MHz
+    	opp_tbl_e1_1[i].cpufreq_volt/100);	// in mV    
+    #endif
     }
 
     return out - buf;
@@ -4312,7 +4381,7 @@ EXPORT_SYMBOL(show_UV_mV_table);
 #define MAX_CPU_CORE_VOLT	1150	/* 1150mv */
 ssize_t store_UV_mV_table(struct cpufreq_policy *policy, const char *buf, size_t count)
 {
-    int i,ret;
+    /*int i,ret;
     unsigned u[NR_MAX_OPP_TBL];
 
     cpufreq_dbg("@%s: buf: %s\n", __func__, buf);
@@ -4336,7 +4405,7 @@ ssize_t store_UV_mV_table(struct cpufreq_policy *policy, const char *buf, size_t
 	//opp_tbl_e1_1[i].cpufreq_volt_org = u[i]*100;	// seems not need this
     }
 
-    _mt_cpufreq_setup_freqs_table(policy, &opp_tbl_e1_1, NR_MAX_OPP_TBL);
+    _mt_cpufreq_setup_freqs_table(policy, &opp_tbl_e1_1, NR_MAX_OPP_TBL);*/
     return count;
 }
 EXPORT_SYMBOL(store_UV_mV_table);
