@@ -278,6 +278,9 @@ unsigned int AllowTurboMode = 0;
 #define CONFIG_MORE_FREQ
 #endif
 
+//custom
+static bool init = 0;
+
 static unsigned int _mt_cpufreq_get_cpu_level(void)
 {
     unsigned int lv = 0;
@@ -2560,7 +2563,8 @@ static void _set_no_limited(struct mt_cpu_dvfs *p)
 
     BUG_ON(NULL == p);
 
-    p->limited_max_freq = cpu_dvfs_get_max_freq(p);
+    p->limited_max_freq = 1690000;	//cpu_dvfs_get_max_freq(p);
+	p->limited_max_freq_by_user = 1690000;
     p->limited_max_ncpu = max_cpu_num;
 
     FUNC_EXIT(FUNC_LV_HELP);
@@ -3332,7 +3336,8 @@ void mt_cpufreq_thermal_protect(unsigned int limited_power)
         /* no limited */
         if (0 == limited_power) {
             p->limited_max_ncpu = possible_cpu;
-            p->limited_max_freq = cpu_dvfs_get_max_freq(p);
+            if (!init)
+                p->limited_max_freq = 1495000;      //cpu_dvfs_get_max_freq(p);
             // restore oppidx
             p->idx_opp_tbl = p->idx_opp_tbl_for_thermal_thro;
         }
@@ -3341,7 +3346,8 @@ void mt_cpufreq_thermal_protect(unsigned int limited_power)
                 for (i = 0; i < p->nr_opp_tbl * possible_cpu; i++) {
                     if (p->power_tbl[i].cpufreq_power <= limited_power) { // p->power_tbl[i].cpufreq_ncpu == ncpu &&
                         p->limited_max_ncpu = p->power_tbl[i].cpufreq_ncpu;
-                        p->limited_max_freq = p->power_tbl[i].cpufreq_khz;
+                        if (!init)
+                            p->limited_max_freq = 1690000;      //p->power_tbl[i].cpufreq_khz;
                         found = 1;
                         ncpu = 0; /* for break outer loop */
                         break;
@@ -3537,12 +3543,20 @@ static unsigned int _calc_new_opp_idx(struct mt_cpu_dvfs *p, int new_opp_idx)
 #endif
 
     /* limit max freq by user */
-    if (p->limited_max_freq_by_user) {
+    /*if (p->limited_max_freq_by_user) {
         idx = _search_available_freq_idx(p, p->limited_max_freq_by_user, CPUFREQ_RELATION_H);
 
         if (idx != -1 && new_opp_idx < idx) {
             new_opp_idx = idx;
 			cpufreq_ver("%s(): limited max freq by user, idx = %d\n", __func__, new_opp_idx);
+        }
+    }*/
+    if (p->limited_max_freq) {
+        idx = _search_available_freq_idx(p, p->limited_max_freq, CPUFREQ_RELATION_H);
+
+        if (idx != -1 && new_opp_idx < idx) {
+            new_opp_idx = idx;
+			cpufreq_ver("%s(): limited max freq, idx = %d\n", __func__, new_opp_idx);
         }
     }
 
@@ -4932,18 +4946,51 @@ static ssize_t cpufreq_limited_by_hevc_proc_write(struct file *file, const char 
     return count;
 }
 
+void set_limit_max_freq_by_user(unsigned int limited_max_freq)
+{
+
+    if (limited_max_freq < 468000)
+        limited_max_freq = 468000;
+    else if (limited_max_freq > 2002000)
+        limited_max_freq = 2002000;                      
+
+    struct mt_cpu_dvfs *p;
+    int i;
+    
+    for_each_cpu_dvfs(i, p)
+    {                
+    
+        p->limited_max_freq_by_user = limited_max_freq;
+        p->limited_max_freq = limited_max_freq;	
+                               
+        if (cpu_dvfs_is_availiable(p) && (p->limited_max_freq_by_user < cpu_dvfs_get_cur_freq(p))) 
+        {
+            struct cpufreq_policy *policy = cpufreq_cpu_get(p->cpu_id);
+
+            if (policy) 
+            {			                   
+                cpufreq_driver_target(policy, p->limited_max_freq_by_user, CPUFREQ_RELATION_H);
+                cpufreq_cpu_put(policy);              
+            }
+        }
+        else
+            cpufreq_err("echo limited_max_freq (dec) > /proc/cpufreq/%s/cpufreq_limited_max_freq_by_user\n", p->name);                
+    }
+}
+
+
 static int cpufreq_limited_max_freq_by_user_proc_show(struct seq_file *m, void *v)
 {
     struct mt_cpu_dvfs *p = (struct mt_cpu_dvfs *)m->private;
 
-    seq_printf(m, "%d\n", p->limited_max_freq_by_user);
+    seq_printf(m, "%d\n", p->limited_max_freq);
 
     return 0;
 }
 
 static ssize_t cpufreq_limited_max_freq_by_user_proc_write(struct file *file, const char __user *buffer, size_t count, loff_t *pos)
 {
-    struct mt_cpu_dvfs *p = (struct mt_cpu_dvfs *)PDE_DATA(file_inode(file));
+/*    struct mt_cpu_dvfs *p = (struct mt_cpu_dvfs *)PDE_DATA(file_inode(file));
     int limited_max_freq;
 
     char *buf = _copy_from_user_for_proc(buffer, count);
@@ -4968,7 +5015,7 @@ static ssize_t cpufreq_limited_max_freq_by_user_proc_write(struct file *file, co
     } else
         cpufreq_err("echo limited_max_freq (dec) > /proc/cpufreq/%s/cpufreq_limited_max_freq_by_user\n", p->name);
 
-    free_page((unsigned long)buf);
+    free_page((unsigned long)buf);*/
     return count;
 }
 
