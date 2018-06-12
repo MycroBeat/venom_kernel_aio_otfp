@@ -100,7 +100,7 @@ static ssize_t pocket_mod_set(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(enable, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(enable, 0666,
 		pocket_mod_show, pocket_mod_set);
 
 static ssize_t pocket_mod_timeout_show(struct device *dev,
@@ -121,7 +121,7 @@ static ssize_t pocket_mod_timeout_set(struct device *dev,
 	return size;
 }
 
-static DEVICE_ATTR(timeout, (S_IWUSR|S_IRUGO),
+static DEVICE_ATTR(timeout, 0666,
 		pocket_mod_timeout_show, pocket_mod_timeout_set);
 
 static struct attribute *pocket_mod_attributes[] =
