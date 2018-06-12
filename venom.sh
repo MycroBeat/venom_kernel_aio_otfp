@@ -80,11 +80,11 @@ v_compile() {
 v_zip() {
                 cd $AK
                 BUILD_TIME=$(date +"%H%M")
-                zip -r Venom-Hybrid-$VAR-$BUILD_DATE-$BUILD_TIME-$DEVICE.zip *
+                zip -r Venom-$VAR-$BUILD_DATE-$BUILD_TIME-$DEVICE.zip *
                 if ! [ -d "$OUTPUTDIR" ]; then
                 mkdir $OUTPUTDIR
                 fi;
-                mv Venom-Hybrid-*.zip $OUTPUTDIR
+                mv Venom-*.zip $OUTPUTDIR
                 cd $TREE
                 }
 

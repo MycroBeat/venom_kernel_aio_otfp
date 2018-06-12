@@ -44,6 +44,7 @@ include/generated/utsrelease.h
 #Ignore the anykernel image copy
 #
 AnyKernel2/Image.gz-dtb
+output/
 
 #
 # Top-level generic files
